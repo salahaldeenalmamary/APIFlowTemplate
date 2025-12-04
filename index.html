@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic API Request Collector</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --success-color: #06d6a0;
+            --danger-color: #ef476f;
+            --warning-color: #ffd166;
+            --dark-color: #121826;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            background-color: var(--dark-color);
+            color: var(--light-color);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background-color: #0f172a;
+            border-bottom: 1px solid #334155;
+            font-weight: 600;
+        }
+        
+        .form-control, .form-select {
+            background-color: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background-color: #1e293b;
+            border-color: var(--primary-color);
+            color: #e2e8f0;
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .response-area {
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+        }
+        
+        .token-display {
+            background: rgba(67, 97, 238, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 10px;
+            word-break: break-all;
+            font-size: 12px;
+        }
+        
+        .api-config {
+            background: rgba(255, 209, 102, 0.1);
+            border-left: 4px solid var(--warning-color);
+            padding: 10px;
+        }
+        
+        .request-item {
+            border-bottom: 1px solid #334155;
+            padding: 10px;
+            transition: background-color 0.2s;
+        }
+        
+        .request-item:hover {
+            background-color: #2d3748;
+        }
+        
+        .status-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 20px;
+        }
+        
+        .tab-content {
+            padding: 20px 0;
+        }
+        
+        .nav-tabs {
+            border-bottom: 1px solid #334155;
+        }
+        
+        .nav-tabs .nav-link {
+            color: #94a3b8;
+            border: none;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            background: transparent;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        pre {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 15px;
+            color: #e2e8f0;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .copy-btn:hover {
+            opacity: 1;
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card shadow-lg">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-globe me-2"></i>Generic API Request Collector</h4>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary me-2" id="requestCounter">Requests: 0</span>
+                            <button class="btn btn-sm btn-outline-light" id="clearHistory">
+                                <i class="fas fa-trash me-1"></i>Clear History
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Tabs Navigation -->
+                        <ul class="nav nav-tabs" id="myTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab">
+                                    <i class="fas fa-cog me-1"></i>Configuration
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="request-tab" data-bs-toggle="tab" data-bs-target="#request" type="button" role="tab">
+                                    <i class="fas fa-paper-plane me-1"></i>Request Builder
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="token-tab" data-bs-toggle="tab" data-bs-target="#token" type="button" role="tab">
+                                    <i class="fas fa-key me-1"></i>Token Management
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+                                    <i class="fas fa-history me-1"></i>Request History
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content" id="myTabContent">
+                            <!-- Configuration Tab -->
+                            <div class="tab-pane fade show active" id="config" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Base URL</label>
+                                            <input type="url" class="form-control" id="baseUrl" 
+                                                   placeholder="https://api.example.com" 
+                                                   value="https://jsonplaceholder.typicode.com">
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Authentication Type</label>
+                                            <select class="form-select" id="authType">
+                                                <option value="bearer">Bearer Token</option>
+                                                <option value="api_key">API Key</option>
+                                                <option value="basic">Basic Auth</option>
+                                                <option value="none">No Auth</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Token Location</label>
+                                            <select class="form-select" id="tokenLocation">
+                                                <option value="header">Header</option>
+                                                <option value="query">Query Parameter</option>
+                                                <option value="body">Request Body</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Default Headers</label>
+                                            <textarea class="form-control" id="defaultHeaders" rows="6" 
+                                                      placeholder='{
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}'>{
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}</textarea>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="enableRateLimit">
+                                            <label class="form-check-label">Enable Rate Limiting (1 second delay between requests)</label>
+                                        </div>
+                                        
+                                        <div class="d-grid">
+                                            <button class="btn btn-primary" id="saveConfig">
+                                                <i class="fas fa-save me-1"></i>Save Configuration
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Request Builder Tab -->
+                            <div class="tab-pane fade" id="request" role="tabpanel">
+                                <div class="row mb-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">API Endpoint</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text" id="baseUrlPreview">https://api.example.com</span>
+                                            <input type="text" class="form-control" id="endpoint" 
+                                                   placeholder="/posts/1" value="/posts/1">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">HTTP Method</label>
+                                        <select class="form-select" id="httpMethod">
+                                            <option value="GET">GET</option>
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="PATCH">PATCH</option>
+                                            <option value="DELETE">DELETE</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Request Parameters</label>
+                                        <div class="mb-2">
+                                            <div class="input-group mb-1">
+                                                <input type="text" class="form-control param-key" placeholder="Key">
+                                                <input type="text" class="form-control param-value" placeholder="Value">
+                                                <button class="btn btn-outline-secondary remove-param" type="button">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary mb-3" id="addParam">
+                                            <i class="fas fa-plus me-1"></i>Add Parameter
+                                        </button>
+                                        
+                                        <label class="form-label">Custom Headers</label>
+                                        <div class="mb-2">
+                                            <div class="input-group mb-1">
+                                                <input type="text" class="form-control header-key" placeholder="Header Name">
+                                                <input type="text" class="form-control header-value" placeholder="Header Value">
+                                                <button class="btn btn-outline-secondary remove-header" type="button">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary mb-3" id="addHeader">
+                                            <i class="fas fa-plus me-1"></i>Add Header
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Request Body (JSON)</label>
+                                        <textarea class="form-control" id="requestBody" rows="8" placeholder='{
+    "key": "value"
+}'></textarea>
+                                        
+                                        <div class="mt-3">
+                                            <label class="form-label">Token Breaking</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="breakAfter" 
+                                                       placeholder="Break token after N requests (optional)" min="1">
+                                                <span class="input-group-text">requests</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                            <button class="btn btn-success" id="sendRequest">
+                                                <i class="fas fa-paper-plane me-1"></i>Send Request
+                                            </button>
+                                            <button class="btn btn-warning" id="testRequest">
+                                                <i class="fas fa-vial me-1"></i>Test Connection
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Token Management Tab -->
+                            <div class="tab-pane fade" id="token" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Token/API Key</label>
+                                            <textarea class="form-control" id="tokenInput" rows="4" 
+                                                      placeholder="Enter your token or API key"></textarea>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Token Parameter Name</label>
+                                            <input type="text" class="form-control" id="tokenParamName" 
+                                                   value="Authorization" placeholder="Authorization">
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-primary" id="setToken">
+                                                <i class="fas fa-key me-1"></i>Set Token
+                                            </button>
+                                            <button class="btn btn-danger" id="clearToken">
+                                                <i class="fas fa-trash me-1"></i>Clear Token
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <i class="fas fa-info-circle me-1"></i>Current Token Status
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="token-display mb-3">
+                                                    <strong>Token:</strong> <span id="currentToken">Not Set</span>
+                                                </div>
+                                                <div class="api-config">
+                                                    <strong>Authentication:</strong> <span id="currentAuthType">Bearer</span><br>
+                                                    <strong>Location:</strong> <span id="currentTokenLocation">Header</span><br>
+                                                    <strong>Parameter:</strong> <span id="currentTokenParam">Authorization</span>
+                                                </div>
+                                                
+                                                <div class="mt-3">
+                                                    <h6>Token Break Simulation</h6>
+                                                    <p class="small text-muted">Simulate token breaking by modifying or rotating tokens</p>
+                                                    <button class="btn btn-sm btn-outline-warning" id="rotateToken">
+                                                        <i class="fas fa-sync-alt me-1"></i>Rotate Token
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" id="breakToken">
+                                                        <i class="fas fa-unlink me-1"></i>Break Token Now
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Request History Tab -->
+                            <div class="tab-pane fade" id="history" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="list-group" id="requestHistoryList">
+                                            <!-- Request history items will appear here -->
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <i class="fas fa-file-code me-1"></i>Response Details
+                                                <button class="btn btn-sm btn-outline-light copy-btn" id="copyResponse">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <pre id="responseDetails">Select a request from history to view details</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="response-area card">
+                                    <div class="card-header d-flex justify-content-between">
+                                        <span><i class="fas fa-reply me-1"></i>Response</span>
+                                        <span class="badge bg-secondary" id="responseStatus">Status: -</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <pre id="responseOutput">Send a request to see the response here...</pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-code me-1"></i>Curl Command
+                                        <button class="btn btn-sm btn-outline-light copy-btn" id="copyCurl">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <pre id="curlCommand"># Curl command will appear here</pre>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <i class="fas fa-bug me-1"></i>Debug Information
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="debugInfo">
+                                            <small class="text-muted">Debug info will appear here</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="notificationToast" class="toast" role="alert">
+            <div class="toast-header">
+                <strong class="me-auto">API Collector</strong>
+                <small>Just now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
